@@ -1,8 +1,8 @@
 -- CS4400: Introduction to Database Systems (Spring 2024)
 -- Phase III: Stored Procedures & Views [v1] Wednesday, March 27, 2024 @ 5:20pm EST
 
--- Team __
--- Team Member Name (GT username)
+-- Team 105
+-- Sergei Novikov (snovikov6)
 -- Team Member Name (GT username)
 -- Team Member Name (GT username)
 -- Team Member Name (GT username)
