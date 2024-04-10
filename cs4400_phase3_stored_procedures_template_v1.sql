@@ -247,6 +247,21 @@ create procedure add_customer
     in ip_birthdate date, in ip_rating integer, in ip_credit integer)
 sp_main: begin
 	-- place your solution here
+    
+    -- perhaps we need to update the customer information  if it is present already in users and/or customers (update instread of insert)
+    if ip_uname not in (select uname from customers) then
+		insert into users values(ip_uname, ip_first_name, ip_last_name, ip_address, ip_birthdate);
+    end if;
+    if ip_rating < 1 or ip_rating > 5 then leave sp_main; end if;
+    
+    -- the credit must always be >= the total orders the customer is currently waiting
+    -- new customer has no orders yet, hence just make sure it is greater than zero I guess
+    if ip_credit < 0 then leave sp_main; end if;
+    
+    if ip_uname not in (select uname from customers) then
+		insert into customers values(ip_uname, ip_rating, ip_credit);
+	end if;
+    -- Sergei: add to two tables (users and customers)
 end //
 delimiter ;
 
