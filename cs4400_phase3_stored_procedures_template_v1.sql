@@ -275,6 +275,21 @@ create procedure add_drone_pilot
     in ip_experience integer)
 sp_main: begin
 	-- place your solution here
+    
+    if ip_uname not in (select uname from users) then
+		insert into users values (ip_uname, ip_first_name, ip_last_name, ip_address, ip_birthdate);
+	end if;
+    
+    if ip_uname not in (select uname from employees) then
+		-- service is number of months they have worked
+		insert into employees values (ip_uname, ip_taxID, ip_service, ip_salary);
+	end if;
+    if ip_uname in (select uname from store_workers) then leave sp_main; end if;
+    if ip_uname in (select uname from drone_pilots) then leave sp_main; end if;
+    if ip_licenseID in (select licenseID from drone_pilots) then leave sp_main; end if;
+    
+	insert into drone_pilots values (ip_uname, ip_licenseID, ip_experience);
+
 end //
 delimiter ;
 
