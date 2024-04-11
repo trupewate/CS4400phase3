@@ -302,6 +302,9 @@ create procedure add_product
     in ip_weight integer)
 sp_main: begin
 	-- place your solution here
+    if ip_barcode in (select barcode from products) then leave sp_main; end if;
+    if ip_weight < 0 then leave sp_main; end if;
+    insert into products values (ip_barcode, ip_pname, ip_weight);
 end //
 delimiter ;
 
@@ -322,13 +325,18 @@ sp_main: begin
     insert into drones values (ip_storeID, ip_droneTag, ip_capacity, ip_remaining_trips, ip_pilot);
 end //
 delimiter ;
--- call add_drone('krg', 2, 15, 2, 'agarcia7');
+
 -- increase customer credits
 delimiter // 
 create procedure increase_customer_credits
 	(in ip_uname varchar(40), in ip_money integer)
 sp_main: begin
 	-- place your solution here
+    declare sum INT Default 0;
+    if ip_uname not in (select uname from customers) then leave sp_main; end if;
+    set sum = (select credit from customers where uname = ip_uname);
+    set sum = sum + ip_money;
+    update customers set credit = sum where uname = ip_uname;
 end //
 delimiter ;
 
@@ -338,6 +346,10 @@ create procedure swap_drone_control
 	(in ip_incoming_pilot varchar(40), in ip_outgoing_pilot varchar(40))
 sp_main: begin
 	-- place your solution here
+    declare temp_pilot varchar(40);
+    if ip_outgoing_pilot not in (select pilot from drones) then leave sp_main; end if;
+    if ip_incoming_pilot in (select pilot from drones) then leave sp_main; end if;
+    update drones set pilot = ip_incoming_pilot where pilot = ip_outgoing_pilot;
 end //
 delimiter ;
 
