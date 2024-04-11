@@ -281,7 +281,8 @@ sp_main: begin
 	end if;
     
     if ip_uname not in (select uname from employees) then
-		-- service is number of months they have worked
+		-- service is number of months they have worked, make sure it is non-negative
+        if ip_service < 0 then leave sp_main; end if;
 		insert into employees values (ip_uname, ip_taxID, ip_service, ip_salary);
 	end if;
     if ip_uname in (select uname from store_workers) then leave sp_main; end if;
@@ -292,6 +293,7 @@ sp_main: begin
 
 end //
 delimiter ;
+
 
 -- add product
 delimiter // 
@@ -310,10 +312,17 @@ create procedure add_drone
     in ip_capacity integer, in ip_remaining_trips integer,
     in ip_pilot varchar(40))
 sp_main: begin
-	-- place your solution here
+	-- place your solution 
+    if ip_storeId not in (select storeId from stores) then leave sp_main; end if;
+    if ip_pilot in (select pilot from drones) then leave sp_main; end if;
+    if (ip_storeID, ip_droneTag) in 
+    (select storeID, droneTag from drones) then leave sp_main; end if;
+    if ip_capacity <= 0 then leave sp_main; end if;
+    if ip_remaining_trips < 0 then leave sp_main; end if;
+    insert into drones values (ip_storeID, ip_droneTag, ip_capacity, ip_remaining_trips, ip_pilot);
 end //
 delimiter ;
-
+-- call add_drone('krg', 2, 15, 2, 'agarcia7');
 -- increase customer credits
 delimiter // 
 create procedure increase_customer_credits
