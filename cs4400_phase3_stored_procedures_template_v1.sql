@@ -332,7 +332,7 @@ create procedure increase_customer_credits
 	(in ip_uname varchar(40), in ip_money integer)
 sp_main: begin
 	-- place your solution here
-    declare sum INT Default 0;
+    Declare sum INT Default 0;
     if ip_uname not in (select uname from customers) then leave sp_main; end if;
     set sum = (select credit from customers where uname = ip_uname);
     set sum = sum + ip_money;
@@ -360,7 +360,10 @@ create procedure repair_refuel_drone
     in ip_refueled_trips integer)
 sp_main: begin
 	-- place your solution here
-    
+    declare rem_trips integer;
+    if (ip_drone_store, ip_drone_tag) not in (select storeID, droneTag from drones) then leave sp_main; end if;
+    set rem_trips = (select remaining_trips from drones where drones.storeID = ip_drone_store and drones.droneTag = ip_drone_tag);
+    update drones set remaining_trips = rem_trips + ip_refueled_trips where drones.storeID = ip_drone_store and drones.droneTag = ip_drone_tag;
 end //
 delimiter ;
 
@@ -461,6 +464,7 @@ create procedure deliver_order
 	(in ip_orderID varchar(40))
 sp_main: begin
 	-- place your solution here
+    
 end //
 delimiter ;
 
@@ -489,13 +493,24 @@ delimiter ;
 -- display persons distribution across roles
 create or replace view role_distribution (category, total) as
 -- replace this select query with your solution
-select 'col1', 'col2' from users;
+-- select 'col1', 'col2' from users;
+
+-- select 'users', count(*) from users union
+-- select 'customers', count(*) from customers union 
+-- select 'employees', count(*) from employees union
+-- select 'drone_pilots', count(*) from drone_pilots union
+-- select 'store_workers', count(*) from store_workers;
 
 -- display customer status and current credit and spending activity
 create or replace view customer_credit_check (customer_name, rating, current_credit,
 	credit_already_allocated) as
 -- replace this select query with your solution
-select 'col1', 'col2', 'col3', 'col4' from customers;
+-- select 'col1', 'col2', 'col3', 'col4' from customers;
+select uname, rating, credit, ifnull(sum(order_lines.price * quantity),0) from customers
+left join orders on customers.uname = orders.purchased_by
+left join order_lines on  order_lines.orderID = orders.orderID
+group by uname;
+
 
 -- display drone status and current activity
 create or replace view drone_traffic_control (drone_serves_store, drone_tag, pilot,
