@@ -534,7 +534,10 @@ left join products on products.barcode = order_lines.barcode group by drones.sto
 create or replace view most_popular_products (barcode, product_name, weight, lowest_price,
 	highest_price, lowest_quantity, highest_quantity, total_quantity) as
 -- replace this select query with your solution
-select 'col1', 'col2', 'col3', 'col4', 'col5', 'col6', 'col7', 'col8' from products;
+-- select 'col1', 'col2', 'col3', 'col4', 'col5', 'col6', 'col7', 'col8' from products;
+select barcode, pname as 'product_name', weight, min(price), max(price), 
+min(quantity), max(quantity), sum(quantity) from products left join order_lines 
+on order_lines.barcode = products.barcode group by barcode;
 
 -- display drone pilot status and current activity including experience
 create or replace view drone_pilot_roster (pilot, licenseID, drone_serves_store,
