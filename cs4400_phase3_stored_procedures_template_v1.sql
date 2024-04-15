@@ -494,12 +494,13 @@ delimiter ;
 create or replace view role_distribution (category, total) as
 -- replace this select query with your solution
 -- select 'col1', 'col2' from users;
-
--- select 'users', count(*) from users union
--- select 'customers', count(*) from customers union 
--- select 'employees', count(*) from employees union
--- select 'drone_pilots', count(*) from drone_pilots union
--- select 'store_workers', count(*) from store_workers;
+select 'users', count(*) from users union
+select 'customers', count(*) from customers union 
+select 'employees', count(*) from employees union
+select 'customer_employer_overlap', count(*) from customers inner join employees on customers.uname = employees.uname union
+select 'drone_pilots', count(*) from drone_pilots union
+select 'store_workers', count(*) from store_workers union
+select 'other_employee_roles', count(*) from employees where uname not in (select uname from drone_pilots union select uname from store_workers);
 
 -- display customer status and current credit and spending activity
 create or replace view customer_credit_check (customer_name, rating, current_credit,
@@ -516,7 +517,14 @@ group by uname;
 create or replace view drone_traffic_control (drone_serves_store, drone_tag, pilot,
 	total_weight_allowed, current_weight, deliveries_allowed, deliveries_in_progress) as
 -- replace this select query with your solution
-select 'col1', 'col2', 'col3', 'col4', 'col5', 'col6', 'col7' from drones;
+-- select 'col1', 'col2', 'col3', 'col4', 'col5', 'col6', 'col7' from drones;
+
+select storeID as 'drone_serves_store', droneTag as 'drone_tag', pilot, capacity as 'total_weight_allowed',
+ifnull(if(sum(products.weight * order_lines.quantity) > capacity, capacity, sum(products.weight * order_lines.quantity)),0) as 'current_weight', 
+remaining_trips as 'deliveries_allowed', 
+count(distinct orders.orderID)  as 'deliveries_in_progress' from drones
+left join orders on drones.droneTag = orders.carrier_tag and drones.storeID = orders.carrier_store left join order_lines on orders.orderID = order_lines.orderID
+left join products on products.barcode = order_lines.barcode group by drones.storeID, drones.droneTag;
 
 -- display product status and current activity including most popular products
 create or replace view most_popular_products (barcode, product_name, weight, lowest_price,
