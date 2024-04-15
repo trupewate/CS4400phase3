@@ -379,42 +379,46 @@ sp_main: begin
 	-- place your solution here
     -- ip_orderID, ip_purchased_by, ip_barcode
     
-    -- DECLARE pc_credits INTEGER;
---     DECLARE pd_capacity INTEGER;
---     
---      IF NOT EXISTS (SELECT * FROM orders WHERE orderID = ip_orderID) THEN
---        
---        IF ip_price >= 0 AND ip_quantity > 0 THEN
---        
--- 			IF EXISTS (SELECT * FROM customers WHERE uname = ip_purchased_by) THEN
--- 	   
--- 				SELECT credit INTO pc_credits FROM customers WHERE uname = ip_purchased_by;
---                 
---                 IF pc_credits >= (ip_quantity * ip_price) THEN
---                 
---                 IF EXISTS (SELECT * FROM drones WHERE droneTag = ip_carrier_tag) AND
--- 					EXISTS (SELECT * FROM products WHERE barcode = ip_barcode) THEN
--- 					
--- 						SELECT capacity INTO pd_capacity FROM drones WHERE droneTag = ip_carrier_tag;
---                         
---                         IF pd_capacity >= (ip_quantity * (SELECT weight FROM products WHERE barcode = ip_barcode)) THEN
---                         
--- 								INSERT INTO orders (orderID, sold_on, purchased_by, carrier_store, carrier_tag)
--- 								VALUES (ip_orderID, ip_sold_on, ip_purchased_by, ip_carrier_store, ip_carrier_tag);
--- 								
--- 								UPDATE customers SET credit = credit - (ip_price * ip_quantity) WHERE uname = ip_purchased_by;
---                                 
---                                 -- UPDATE drones SET capacity = capacity - (ip_quantity * (SELECT weight FROM products WHERE barcode = ip_barcode)) WHERE droneTag = ip_carrier_tag;
---                     
--- 						END IF;
--- 					END IF;
--- 				END IF;
---             
---             END IF;
---             
---        END IF; 
--- 			
--- 	 END IF;
+    DECLARE pc_credits INTEGER;
+    DECLARE pd_capacity INTEGER;
+    
+     IF NOT EXISTS (SELECT * FROM orders WHERE orderID = ip_orderID) THEN
+       
+       IF ip_price >= 0 AND ip_quantity > 0 THEN
+       
+			IF EXISTS (SELECT * FROM customers WHERE uname = ip_purchased_by) THEN
+	   
+				SET pc_credits = (SELECT credit FROM customers WHERE uname = ip_purchased_by);
+                
+                IF pc_credits >= (ip_quantity * ip_price) THEN
+                
+                IF EXISTS (SELECT * FROM drones WHERE droneTag = ip_carrier_tag AND storeID = ip_carrier_store) THEN
+					
+						SET pd_capacity = (SELECT capacity FROM drones WHERE droneTag = ip_carrier_tag AND storeID = ip_carrier_store);
+                        
+                       IF EXISTS (SELECT * FROM products WHERE barcode = ip_barcode) THEN
+                        
+                        IF pd_capacity >= (ip_quantity * (SELECT weight FROM products WHERE barcode = ip_barcode)) THEN
+                        
+								INSERT INTO orders (orderID, sold_on, purchased_by, carrier_store, carrier_tag)
+								VALUES (ip_orderID, ip_sold_on, ip_purchased_by, ip_carrier_store, ip_carrier_tag);
+                                
+                                INSERT INTO order_lines (orderID, barcode, price, quantity)
+                                VALUES (ip_orderID, ip_barcode, ip_price, ip_quantity);
+								
+								-- UPDATE customers SET credit = credit - (ip_price * ip_quantity) WHERE uname = ip_purchased_by;
+                                
+                                -- UPDATE drones SET capacity = capacity - (ip_quantity * (SELECT weight FROM products WHERE barcode = ip_barcode)) WHERE droneTag = ip_carrier_tag;
+						END IF;
+						END IF;
+					END IF;
+				END IF;
+            
+            END IF;
+            
+       END IF; 
+			
+	 END IF;
 end //
 delimiter ;
 
@@ -425,36 +429,36 @@ create procedure add_order_line
     in ip_price integer, in ip_quantity integer)
 sp_main: begin
 	-- place your solution here
-    -- DECLARE pc_credits INTEGER;
---     DECLARE pd_capacity INTEGER;
---     
---     IF EXISTS (SELECT * FROM orders WHERE orderID = ip_orderID) AND EXISTS(SELECT * FROM products WHERE barcode = ip_barcode) THEN
---     
--- 		IF NOT EXISTS (SELECT * from order_lines WHERE barcode = ip_barcode) THEN
---         
--- 			IF ip_price >= 0 AND ip_quantity > 0 THEN
--- 				
---                 SELECT credit INTO pc_credits FROM customers WHERE uname = (SELECT purchased_by FROM orders WHERE orderID = ip_orderID);
---                 
---                 IF pc_credits >= (ip_price * ip_quantity) THEN
---                 
--- 					SELECT capacity INTO pd_capacity FROM drones WHERE droneTag = (SELECT carrier_tag FROM orders WHERE orderID = ip_orderID);
---                     
---                     IF pd_capacity >= ip_quantity * (SELECT weight FROM products WHERE barcode = ip_barcode) THEN
---                     
--- 						INSERT INTO order_lines (orderID, barcode, price, quantity)
---                         VALUES (ip_orderID, ip_barcode, ip_price, ip_quantity);
---                         
---                         UPDATE customers SET credit = credit - (ip_price * ip_quantity) WHERE uname = ip_purchased_by;
---                     
---                     END IF;
---                 
---                 END IF;
---                 
--- 			END IF;
---         END IF;
---     END IF;
---     
+    DECLARE pc_credits INTEGER;
+    DECLARE pd_capacity INTEGER;
+    
+    IF EXISTS (SELECT * FROM orders WHERE orderID = ip_orderID) AND EXISTS(SELECT * FROM products WHERE barcode = ip_barcode) THEN
+    
+		IF NOT EXISTS (SELECT * from order_lines WHERE barcode = ip_barcode AND orderID = ip_orderID) THEN
+        
+			IF ip_price >= 0 AND ip_quantity > 0 THEN
+				
+                SET pc_credits = (SELECT credit FROM customers WHERE uname = (SELECT purchased_by FROM orders WHERE orderID = ip_orderID));
+                
+                IF pc_credits >= (ip_price * ip_quantity) THEN
+                
+					SET pd_capacity = (SELECT capacity FROM drones WHERE droneTag = (SELECT carrier_tag FROM orders WHERE orderID = ip_orderID) AND storeID = (SELECT carrier_store FROM orders WHERE orderID = ip_orderID));
+                    
+                    IF pd_capacity >= ip_quantity * (SELECT weight FROM products WHERE barcode = ip_barcode) THEN
+                    
+						INSERT INTO order_lines (orderID, barcode, price, quantity)
+                        VALUES (ip_orderID, ip_barcode, ip_price, ip_quantity);
+                        
+                        -- UPDATE customers SET credit = credit - (ip_price * ip_quantity) WHERE uname = ip_purchased_by;
+                    
+                    END IF;
+                
+                END IF;
+                
+			END IF;
+        END IF;
+    END IF;
+    
 end //
 delimiter ;
 
@@ -565,19 +569,23 @@ create procedure remove_drone_pilot
 	(in ip_uname varchar(40))
 sp_main: begin
 	-- place your solution here
-    DECLARE pilotID VARCHAR(40);
-    DECLARE is_cust BOOLEAN;
+    -- DECLARE pilotID VARCHAR(40);
+    -- DECLARE is_cust BOOLEAN;
     
-    SET pilotID = (SELECT licenseID FROM drone_pilots WHERE uname = ip_uname);
+    -- SET pilotID = (SELECT licenseID FROM drone_pilots WHERE uname = ip_uname);
     
-    SET is_cust = EXISTS (SELECT * FROM customers WHERE uname = ip_uname);
-    
-    IF NOT EXISTS (SELECT * FROM drones WHERE pilot = pilotID) THEN
+    -- SET is_cust = EXISTS (SELECT * FROM customers WHERE uname = ip_uname);
+	IF NOT EXISTS (SELECT * FROM drones WHERE pilot = ip_uname) THEN
 		
-        -- IF is_cust THEN 
-			DELETE FROM drone_pilots WHERE licenseID = pilotID;
-        -- END IF;
-    END IF;
+		-- IF is_cust THEN 
+			DELETE FROM drone_pilots WHERE uname = ip_uname;
+			DELETE FROM employees WHERE uname = ip_uname;
+			
+			IF NOT EXISTS (SELECT * FROM customers WHERE uname = ip_uname) THEN
+				DELETE FROM users WHERE uname = ip_uname;
+			END IF;
+		-- END IF;
+	END IF;
 end //
 delimiter ;
 
