@@ -520,7 +520,7 @@ create or replace view drone_traffic_control (drone_serves_store, drone_tag, pil
 -- select 'col1', 'col2', 'col3', 'col4', 'col5', 'col6', 'col7' from drones;
 
 select storeID as 'drone_serves_store', droneTag as 'drone_tag', pilot, capacity as 'total_weight_allowed',
-ifnull(if(sum(products.weight * order_lines.quantity) > capacity, capacity, sum(products.weight * order_lines.quantity)),0) as 'current_weight', 
+ifnull(sum(products.weight * order_lines.quantity),0) as 'current_weight', 
 remaining_trips as 'deliveries_allowed', 
 count(distinct orders.orderID)  as 'deliveries_in_progress' from drones
 left join orders on drones.droneTag = orders.carrier_tag and drones.storeID = orders.carrier_store left join order_lines on orders.orderID = order_lines.orderID
