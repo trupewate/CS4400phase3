@@ -544,19 +544,25 @@ create or replace view drone_pilot_roster (pilot, licenseID, drone_serves_store,
 	drone_tag, successful_deliveries, pending_deliveries) as
 -- replace this select query with your solution
 -- select 'col1', 'col2', 'col3', 'col4', 'col5', 'col6' from drone_pilots;
-select drone_pilots.uname as 'pilot', licenseID, drones.storeID as 'drone_serves_store',
-drones.droneTag as 'drone_tag', experience as 'successful_deliveries', count(distinct orders.orderID)
-from drone_pilots 
-left join drones on drone_pilots.uname = drones.pilot 
-left join stores on stores.storeID = drones.storeID 
-left join orders on orders.carrier_store = drones.storeID and orders.carrier_tag = drones.droneTag
-group by drone_pilots.uname;
+select dp.uname as 'pilot', dp.licenseID, d.storeID as 'drone_serves_store',
+d.droneTag as 'drone_tag', dp.experience as 'successful_deliveries', ifnull(o.pending_deliveries, 0)
+from drone_pilots as dp
+left join (select pilot, droneTag, storeID from drones) d on d.pilot = dp.uname
+left join (select carrier_store, carrier_tag, count(orderID) as pending_deliveries from orders group by carrier_store, carrier_tag) o 
+on o.carrier_store = d.storeId and o.carrier_tag = d.droneTag;
+
 
 -- display store revenue and activity
 create or replace view store_sales_overview (store_id, sname, manager, revenue,
 	incoming_revenue, incoming_orders) as
 -- replace this select query with your solution
 select 'col1', 'col2', 'col3', 'col4', 'col5', 'col6' from stores;
+select s.storeID, s.sname, s.revenue, o.incoming_revenue, s.manager, o.incoming_orders from stores as s
+left join (select carrier_store, count(orders.orderID) as incoming_orders, sum(order_revenue) as incoming_revenue from orders
+left join (select order_lines.orderID, sum(price * quantity) as order_revenue from order_lines group by order_lines.orderID) 
+ol on orders.orderID = ol.orderID group by orders.carrier_store) 
+o on o.carrier_store = s.storeID;
+
 
 -- display the current orders that are being placed/in progress
 create or replace view orders_in_progress (orderID, cost, num_products, payload,
