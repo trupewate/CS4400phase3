@@ -535,15 +535,22 @@ create or replace view most_popular_products (barcode, product_name, weight, low
 	highest_price, lowest_quantity, highest_quantity, total_quantity) as
 -- replace this select query with your solution
 -- select 'col1', 'col2', 'col3', 'col4', 'col5', 'col6', 'col7', 'col8' from products;
-select barcode, pname as 'product_name', weight, min(price), max(price), 
-min(quantity), max(quantity), sum(quantity) from products left join order_lines 
+select products.barcode as 'barcode', pname as 'product_name', weight, min(price), max(price), 
+ifnull(min(quantity), 0), ifnull(max(quantity), 0), ifnull(sum(quantity), 0) from products left join order_lines 
 on order_lines.barcode = products.barcode group by barcode;
 
 -- display drone pilot status and current activity including experience
 create or replace view drone_pilot_roster (pilot, licenseID, drone_serves_store,
 	drone_tag, successful_deliveries, pending_deliveries) as
 -- replace this select query with your solution
-select 'col1', 'col2', 'col3', 'col4', 'col5', 'col6' from drone_pilots;
+-- select 'col1', 'col2', 'col3', 'col4', 'col5', 'col6' from drone_pilots;
+select drone_pilots.uname as 'pilot', licenseID, drones.storeID as 'drone_serves_store',
+drones.droneTag as 'drone_tag', experience as 'successful_deliveries', count(distinct orders.orderID)
+from drone_pilots 
+left join drones on drone_pilots.uname = drones.pilot 
+left join stores on stores.storeID = drones.storeID 
+left join orders on orders.carrier_store = drones.storeID and orders.carrier_tag = drones.droneTag
+group by drone_pilots.uname;
 
 -- display store revenue and activity
 create or replace view store_sales_overview (store_id, sname, manager, revenue,
