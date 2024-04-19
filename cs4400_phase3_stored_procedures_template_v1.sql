@@ -567,8 +567,21 @@ o on o.carrier_store = s.storeID;
 -- display the current orders that are being placed/in progress
 create or replace view orders_in_progress (orderID, cost, num_products, payload,
 	contents) as
--- replace this select query with your solution
-select 'col1', 'col2', 'col3', 'col4', 'col5' from orders;
+-- select 'col1', 'col2', 'col3', 'col4', 'col5' from orders;
+SELECT
+    o.orderID,
+    SUM(d.price * d.quantity) AS cost,
+    COUNT(d.orderID) AS num_products,
+    SUM(p.weight * d.quantity) AS payload,
+    GROUP_CONCAT(DISTINCT p.pname ORDER BY p.pname ASC SEPARATOR ',') AS contents
+FROM
+    orders o
+JOIN
+    order_lines d ON o.orderID = d.orderID
+JOIN
+    products p ON d.barcode = p.barcode
+GROUP BY
+    o.orderID;
 
 -- remove customer
 delimiter // 
