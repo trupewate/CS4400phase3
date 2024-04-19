@@ -588,7 +588,15 @@ delimiter //
 create procedure remove_customer
 	(in ip_uname varchar(40))
 sp_main: begin
-	-- place your solution here
+    IF NOT EXISTS (SELECT * FROM orders WHERE purchased_By = ip_uname) THEN
+        -- Remove the customer
+        DELETE FROM customers WHERE uname = ip_uname;
+        -- Check if the customer is also an employee
+        IF NOT EXISTS (SELECT * FROM employees WHERE uname = ip_uname) THEN
+            -- If not an employee, delete the user as well
+            DELETE FROM users WHERE uname = ip_uname;
+        END IF;
+    END IF;
 end //
 delimiter ;
 
