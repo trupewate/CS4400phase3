@@ -467,8 +467,75 @@ delimiter //
 create procedure deliver_order
 	(in ip_orderID varchar(40))
 sp_main: begin
-	-- place your solution here
+    DECLARE order_cost INTEGER DEFAULT 0;
+    DECLARE customer_uname VARCHAR(40);
+    DECLARE drone_store VARCHAR(40);
+    DECLARE drone_tag INTEGER;
+    DECLARE pilot_uname VARCHAR(40);
+    DECLARE customer_credit INTEGER;
+    DECLARE drone_trips_left INTEGER;
     
+    if not exists (SELECT purchased_by, carrier_store, carrier_tag FROM orders WHERE orderID = ip_orderID) then
+		leave sp_main;
+	end if;
+    
+    -- Validate orderID and get associated details
+    SELECT purchased_by, carrier_store, carrier_tag INTO customer_uname, drone_store, drone_tag
+    FROM orders
+    WHERE orderID = ip_orderID;
+    
+    -- Calculate total cost of the order
+    SELECT SUM(price * quantity) INTO order_cost
+    FROM order_lines
+    WHERE orderID = ip_orderID;
+    
+    -- Get the customer's current credit
+    SELECT credit INTO customer_credit
+    FROM customers
+    WHERE uname = customer_uname;
+    
+    -- Check if the drone has enough trips left
+    SELECT remaining_trips INTO drone_trips_left
+    FROM drones
+    WHERE storeID = drone_store AND droneTag = drone_tag;
+    
+    IF drone_trips_left > 0 THEN
+        -- Update customer's credit
+        UPDATE customers
+        SET credit = customer_credit - order_cost
+        WHERE uname = customer_uname;
+        
+        -- Update store's revenue
+        UPDATE stores
+        SET revenue = revenue + order_cost
+        WHERE storeID = drone_store;
+        
+        -- Update drone's remaining trips
+        UPDATE drones
+        SET remaining_trips = remaining_trips - 1
+        WHERE storeID = drone_store AND droneTag = drone_tag;
+        
+        -- Get the pilot's uname
+        SELECT pilot INTO pilot_uname
+        FROM drones
+        WHERE storeID = drone_store AND droneTag = drone_tag;
+        
+        -- Update pilot's experience
+        UPDATE drone_pilots
+        SET experience = experience + 1
+        WHERE uname = pilot_uname;
+        
+        -- Increase customer's rating if the order was more than $25
+        IF order_cost > 25 THEN
+            UPDATE customers
+            SET rating = rating + 1
+            WHERE uname = customer_uname;
+        END IF;
+        
+        -- Delete all records of the order
+        DELETE FROM order_lines WHERE orderID = ip_orderID;
+        DELETE FROM orders WHERE orderID = ip_orderID;
+    END IF;
 end //
 delimiter ;
 
@@ -555,8 +622,6 @@ on o.carrier_store = d.storeId and o.carrier_tag = d.droneTag;
 -- display store revenue and activity
 create or replace view store_sales_overview (store_id, sname, manager, revenue,
 	incoming_revenue, incoming_orders) as
--- replace this select query with your solution
-select 'col1', 'col2', 'col3', 'col4', 'col5', 'col6' from stores;
 select s.storeID, s.sname, s.revenue, o.incoming_revenue, s.manager, o.incoming_orders from stores as s
 left join (select carrier_store, count(orders.orderID) as incoming_orders, sum(order_revenue) as incoming_revenue from orders
 left join (select order_lines.orderID, sum(price * quantity) as order_revenue from order_lines group by order_lines.orderID) 
@@ -645,7 +710,7 @@ create procedure remove_drone
 sp_main: begin
     IF NOT EXISTS (SELECT * FROM orders WHERE carrier_store = ip_storeID AND carrier_tag = ip_droneTag) THEN
         -- Remove the drone from the drones table if it is not carrying any orders
-        DELETE FROM drones WHERE store_id = ip_storeID AND drone_tag = ip_droneTag;
+        DELETE FROM drones WHERE storeId = ip_storeID AND droneTag = ip_droneTag;
     END IF;
 end //
 delimiter ;
