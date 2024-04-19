@@ -643,6 +643,9 @@ delimiter //
 create procedure remove_drone
 	(in ip_storeID varchar(40), in ip_droneTag integer)
 sp_main: begin
-	-- place your solution here
+    IF NOT EXISTS (SELECT * FROM orders WHERE carrier_store = ip_storeID AND carrier_tag = ip_droneTag) THEN
+        -- Remove the drone from the drones table if it is not carrying any orders
+        DELETE FROM drones WHERE store_id = ip_storeID AND drone_tag = ip_droneTag;
+    END IF;
 end //
 delimiter ;
