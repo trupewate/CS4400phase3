@@ -631,7 +631,10 @@ delimiter //
 create procedure remove_product
 	(in ip_barcode varchar(40))
 sp_main: begin
-	-- place your solution here
+    IF NOT EXISTS (SELECT * FROM order_lines WHERE barcode = ip_barcode) THEN
+        -- Remove the product from the Products table if it is not used in any orders
+        DELETE FROM Products WHERE barcode = ip_barcode;
+    END IF;
 end //
 delimiter ;
 
