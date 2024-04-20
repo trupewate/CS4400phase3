@@ -440,13 +440,12 @@ sp_main: begin
 				
                 SET pc_credits = (SELECT credit FROM customers WHERE uname = (SELECT purchased_by FROM orders WHERE orderID = ip_orderID));
                 
+                
                 IF pc_credits >= (ip_price * ip_quantity) THEN
                 
-					SET pd_capacity = (SELECT capacity FROM drones WHERE droneTag = (SELECT carrier_tag FROM orders WHERE orderID = ip_orderID) AND storeID = (SELECT carrier_store FROM orders WHERE orderID = ip_orderID));
+					select total_weight_allowed - current_weight into pd_capacity from drone_traffic_control where drone_serves_store = (SELECT carrier_store FROM orders WHERE orderID = ip_orderID) and drone_tag = (SELECT carrier_tag FROM orders WHERE orderID = ip_orderID);
                     
                     IF pd_capacity >= ip_quantity * (SELECT weight FROM products WHERE barcode = ip_barcode) THEN
-                    
-						UPDATE drones SET capacity = capacity - pd_capacity where  droneTag = (SELECT carrier_tag FROM orders WHERE orderID = ip_orderID) AND storeID = (SELECT carrier_store FROM orders WHERE orderID = ip_orderID);
                     
 						INSERT INTO order_lines (orderID, barcode, price, quantity)
                         VALUES (ip_orderID, ip_barcode, ip_price, ip_quantity);
@@ -476,7 +475,6 @@ sp_main: begin
     DECLARE pilot_uname VARCHAR(40);
     DECLARE customer_credit INTEGER;
     DECLARE drone_trips_left INTEGER;
-    DECLARE pd_capacity INTEGER;
     
     if not exists (SELECT purchased_by, carrier_store, carrier_tag FROM orders WHERE orderID = ip_orderID) then
 		leave sp_main;
@@ -502,7 +500,7 @@ sp_main: begin
     FROM drones
     WHERE storeID = drone_store AND droneTag = drone_tag;
     
-    IF drone_trips_left > 0 THEN
+    IF drone_trips_left > 0 THEN    
         -- Update customer's credit
         UPDATE customers
         SET credit = customer_credit - order_cost
@@ -534,10 +532,6 @@ sp_main: begin
             SET rating = rating + 1
             WHERE uname = customer_uname;
         END IF;
-        
-        -- UPDATE CAPACITY
-        SET pd_capacity = (SELECT capacity FROM drones WHERE droneTag = (SELECT carrier_tag FROM orders WHERE orderID = ip_orderID) AND storeID = (SELECT carrier_store FROM orders WHERE orderID = ip_orderID));
-        UPDATE drones SET capacity = capacity + pd_capacity where  droneTag = (SELECT carrier_tag FROM orders WHERE orderID = ip_orderID) AND storeID = (SELECT carrier_store FROM orders WHERE orderID = ip_orderID);
         
         -- Delete all records of the order
         DELETE FROM order_lines WHERE orderID = ip_orderID;
@@ -629,13 +623,9 @@ on o.carrier_store = d.storeId and o.carrier_tag = d.droneTag;
 -- display store revenue and activity
 create or replace view store_sales_overview (store_id, sname, manager, revenue,
 	incoming_revenue, incoming_orders) as
-<<<<<<< HEAD
 -- replace this select query with your solution
 -- select 'col1', 'col2', 'col3', 'col4', 'col5', 'col6' from stores;
 select s.storeID as 'store_id', s.sname, s.manager, s.revenue, o.incoming_revenue, o.incoming_orders from stores as s
-=======
-select s.storeID, s.sname, s.revenue, o.incoming_revenue, s.manager, o.incoming_orders from stores as s
->>>>>>> 4f36224d021ca33529e8a73cd183628e9ec4ccf2
 left join (select carrier_store, count(orders.orderID) as incoming_orders, sum(order_revenue) as incoming_revenue from orders
 left join (select order_lines.orderID, sum(price * quantity) as order_revenue from order_lines group by order_lines.orderID) 
 ol on orders.orderID = ol.orderID group by orders.carrier_store) 
