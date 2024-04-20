@@ -556,8 +556,8 @@ on o.carrier_store = d.storeId and o.carrier_tag = d.droneTag;
 create or replace view store_sales_overview (store_id, sname, manager, revenue,
 	incoming_revenue, incoming_orders) as
 -- replace this select query with your solution
-select 'col1', 'col2', 'col3', 'col4', 'col5', 'col6' from stores;
-select s.storeID, s.sname, s.revenue, o.incoming_revenue, s.manager, o.incoming_orders from stores as s
+-- select 'col1', 'col2', 'col3', 'col4', 'col5', 'col6' from stores;
+select s.storeID as 'store_id', s.sname, s.manager, s.revenue, o.incoming_revenue, o.incoming_orders from stores as s
 left join (select carrier_store, count(orders.orderID) as incoming_orders, sum(order_revenue) as incoming_revenue from orders
 left join (select order_lines.orderID, sum(price * quantity) as order_revenue from order_lines group by order_lines.orderID) 
 ol on orders.orderID = ol.orderID group by orders.carrier_store) 
