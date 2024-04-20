@@ -446,6 +446,8 @@ sp_main: begin
                     
                     IF pd_capacity >= ip_quantity * (SELECT weight FROM products WHERE barcode = ip_barcode) THEN
                     
+						UPDATE drones SET capacity = capacity - pd_capacity where  droneTag = (SELECT carrier_tag FROM orders WHERE orderID = ip_orderID) AND storeID = (SELECT carrier_store FROM orders WHERE orderID = ip_orderID);
+                    
 						INSERT INTO order_lines (orderID, barcode, price, quantity)
                         VALUES (ip_orderID, ip_barcode, ip_price, ip_quantity);
                         
@@ -474,6 +476,7 @@ sp_main: begin
     DECLARE pilot_uname VARCHAR(40);
     DECLARE customer_credit INTEGER;
     DECLARE drone_trips_left INTEGER;
+    DECLARE pd_capacity INTEGER;
     
     if not exists (SELECT purchased_by, carrier_store, carrier_tag FROM orders WHERE orderID = ip_orderID) then
 		leave sp_main;
@@ -531,6 +534,10 @@ sp_main: begin
             SET rating = rating + 1
             WHERE uname = customer_uname;
         END IF;
+        
+        -- UPDATE CAPACITY
+        SET pd_capacity = (SELECT capacity FROM drones WHERE droneTag = (SELECT carrier_tag FROM orders WHERE orderID = ip_orderID) AND storeID = (SELECT carrier_store FROM orders WHERE orderID = ip_orderID));
+        UPDATE drones SET capacity = capacity + pd_capacity where  droneTag = (SELECT carrier_tag FROM orders WHERE orderID = ip_orderID) AND storeID = (SELECT carrier_store FROM orders WHERE orderID = ip_orderID);
         
         -- Delete all records of the order
         DELETE FROM order_lines WHERE orderID = ip_orderID;
