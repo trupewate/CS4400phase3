@@ -4,6 +4,8 @@
 -- Team 105
 -- Sergei Novikov (snovikov6)
 -- Gaurang Kamat (gkamat8)
+-- Uzair Akbar (uakbar3)
+-- Arseniy Tsinzerling (atsinzerling3)
 -- Team Member Name (GT username)
 -- Team Member Name (GT username)
 -- Team Member Name (GT username)
@@ -438,8 +440,7 @@ sp_main: begin
         
 			IF ip_price >= 0 AND ip_quantity > 0 THEN
 				
-                SET pc_credits = (SELECT credit FROM customers WHERE uname = (SELECT purchased_by FROM orders WHERE orderID = ip_orderID));
-                
+                SELECT (current_credit - credit_already_allocated) into pc_credits from customer_credit_check where customer_name = (SELECT purchased_by FROM orders WHERE orderID = ip_orderID);
                 
                 IF pc_credits >= (ip_price * ip_quantity) THEN
                 
