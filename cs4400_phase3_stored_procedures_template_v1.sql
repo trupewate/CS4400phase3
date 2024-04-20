@@ -467,8 +467,75 @@ delimiter //
 create procedure deliver_order
 	(in ip_orderID varchar(40))
 sp_main: begin
-	-- place your solution here
+    DECLARE order_cost INTEGER DEFAULT 0;
+    DECLARE customer_uname VARCHAR(40);
+    DECLARE drone_store VARCHAR(40);
+    DECLARE drone_tag INTEGER;
+    DECLARE pilot_uname VARCHAR(40);
+    DECLARE customer_credit INTEGER;
+    DECLARE drone_trips_left INTEGER;
     
+    if not exists (SELECT purchased_by, carrier_store, carrier_tag FROM orders WHERE orderID = ip_orderID) then
+		leave sp_main;
+	end if;
+    
+    -- Validate orderID and get associated details
+    SELECT purchased_by, carrier_store, carrier_tag INTO customer_uname, drone_store, drone_tag
+    FROM orders
+    WHERE orderID = ip_orderID;
+    
+    -- Calculate total cost of the order
+    SELECT SUM(price * quantity) INTO order_cost
+    FROM order_lines
+    WHERE orderID = ip_orderID;
+    
+    -- Get the customer's current credit
+    SELECT credit INTO customer_credit
+    FROM customers
+    WHERE uname = customer_uname;
+    
+    -- Check if the drone has enough trips left
+    SELECT remaining_trips INTO drone_trips_left
+    FROM drones
+    WHERE storeID = drone_store AND droneTag = drone_tag;
+    
+    IF drone_trips_left > 0 THEN
+        -- Update customer's credit
+        UPDATE customers
+        SET credit = customer_credit - order_cost
+        WHERE uname = customer_uname;
+        
+        -- Update store's revenue
+        UPDATE stores
+        SET revenue = revenue + order_cost
+        WHERE storeID = drone_store;
+        
+        -- Update drone's remaining trips
+        UPDATE drones
+        SET remaining_trips = remaining_trips - 1
+        WHERE storeID = drone_store AND droneTag = drone_tag;
+        
+        -- Get the pilot's uname
+        SELECT pilot INTO pilot_uname
+        FROM drones
+        WHERE storeID = drone_store AND droneTag = drone_tag;
+        
+        -- Update pilot's experience
+        UPDATE drone_pilots
+        SET experience = experience + 1
+        WHERE uname = pilot_uname;
+        
+        -- Increase customer's rating if the order was more than $25
+        IF order_cost > 25 THEN
+            UPDATE customers
+            SET rating = rating + 1
+            WHERE uname = customer_uname;
+        END IF;
+        
+        -- Delete all records of the order
+        DELETE FROM order_lines WHERE orderID = ip_orderID;
+        DELETE FROM orders WHERE orderID = ip_orderID;
+    END IF;
 end //
 delimiter ;
 
@@ -555,9 +622,13 @@ on o.carrier_store = d.storeId and o.carrier_tag = d.droneTag;
 -- display store revenue and activity
 create or replace view store_sales_overview (store_id, sname, manager, revenue,
 	incoming_revenue, incoming_orders) as
+<<<<<<< HEAD
 -- replace this select query with your solution
 -- select 'col1', 'col2', 'col3', 'col4', 'col5', 'col6' from stores;
 select s.storeID as 'store_id', s.sname, s.manager, s.revenue, o.incoming_revenue, o.incoming_orders from stores as s
+=======
+select s.storeID, s.sname, s.revenue, o.incoming_revenue, s.manager, o.incoming_orders from stores as s
+>>>>>>> 4f36224d021ca33529e8a73cd183628e9ec4ccf2
 left join (select carrier_store, count(orders.orderID) as incoming_orders, sum(order_revenue) as incoming_revenue from orders
 left join (select order_lines.orderID, sum(price * quantity) as order_revenue from order_lines group by order_lines.orderID) 
 ol on orders.orderID = ol.orderID group by orders.carrier_store) 
@@ -567,15 +638,36 @@ o on o.carrier_store = s.storeID;
 -- display the current orders that are being placed/in progress
 create or replace view orders_in_progress (orderID, cost, num_products, payload,
 	contents) as
--- replace this select query with your solution
-select 'col1', 'col2', 'col3', 'col4', 'col5' from orders;
+-- select 'col1', 'col2', 'col3', 'col4', 'col5' from orders;
+SELECT
+    o.orderID,
+    SUM(d.price * d.quantity) AS cost,
+    COUNT(d.orderID) AS num_products,
+    SUM(p.weight * d.quantity) AS payload,
+    GROUP_CONCAT(DISTINCT p.pname ORDER BY p.pname ASC SEPARATOR ',') AS contents
+FROM
+    orders o
+JOIN
+    order_lines d ON o.orderID = d.orderID
+JOIN
+    products p ON d.barcode = p.barcode
+GROUP BY
+    o.orderID;
 
 -- remove customer
 delimiter // 
 create procedure remove_customer
 	(in ip_uname varchar(40))
 sp_main: begin
-	-- place your solution here
+    IF NOT EXISTS (SELECT * FROM orders WHERE purchased_By = ip_uname) THEN
+        -- Remove the customer
+        DELETE FROM customers WHERE uname = ip_uname;
+        -- Check if the customer is also an employee
+        IF NOT EXISTS (SELECT * FROM employees WHERE uname = ip_uname) THEN
+            -- If not an employee, delete the user as well
+            DELETE FROM users WHERE uname = ip_uname;
+        END IF;
+    END IF;
 end //
 delimiter ;
 
@@ -610,7 +702,10 @@ delimiter //
 create procedure remove_product
 	(in ip_barcode varchar(40))
 sp_main: begin
-	-- place your solution here
+    IF NOT EXISTS (SELECT * FROM order_lines WHERE barcode = ip_barcode) THEN
+        -- Remove the product from the Products table if it is not used in any orders
+        DELETE FROM Products WHERE barcode = ip_barcode;
+    END IF;
 end //
 delimiter ;
 
@@ -619,6 +714,9 @@ delimiter //
 create procedure remove_drone
 	(in ip_storeID varchar(40), in ip_droneTag integer)
 sp_main: begin
-	-- place your solution here
+    IF NOT EXISTS (SELECT * FROM orders WHERE carrier_store = ip_storeID AND carrier_tag = ip_droneTag) THEN
+        -- Remove the drone from the drones table if it is not carrying any orders
+        DELETE FROM drones WHERE storeId = ip_storeID AND droneTag = ip_droneTag;
+    END IF;
 end //
 delimiter ;
