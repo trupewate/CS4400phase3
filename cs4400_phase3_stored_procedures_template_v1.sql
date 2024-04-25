@@ -274,13 +274,32 @@ create procedure add_drone_pilot
     in ip_experience integer)
 sp_main: begin
     
+    if ip_uname is NULL or ip_uname = '' THEN
+		leave sp_main;
+	end if;
+    
+    if ip_first_name IS NULL or ip_last_name IS NULL or ip_address IS NULL or 
+    ip_birthdate IS NULL OR ip_taxID IS NULL OR ip_service IS NULL OR ip_salary IS NULL THEN
+		LEAVE sp_main;
+	end if;
+    
+    if ip_licenseID is NULL or ip_licenseID = '' THEN
+		leave sp_main;
+	end if;
+    
+    if ip_experience is NULL or ip_experience < 0 THEN
+		leave sp_main;
+	end if;
+    
     if ip_uname not in (select uname from users) then
 		insert into users values (ip_uname, ip_first_name, ip_last_name, ip_address, ip_birthdate);
 	end if;
     
     if ip_uname not in (select uname from employees) then
         if ip_service < 0 then leave sp_main; end if;
-		insert into employees values (ip_uname, ip_taxID, ip_service, ip_salary);
+        if NOT EXISTS (SELECT * FROM employees WHERE taxID = ip_taxID) THEN
+			insert into employees values (ip_uname, ip_taxID, ip_service, ip_salary);
+        END IF;
 	end if;
     if ip_uname in (select uname from store_workers) then leave sp_main; end if;
     if ip_uname in (select uname from drone_pilots) then leave sp_main; end if;
@@ -383,6 +402,15 @@ sp_main: begin
     
     DECLARE pc_credits INTEGER;
     DECLARE pd_capacity INTEGER;
+    
+    IF ip_orderID is NULL or ip_sold_on is NULL or ip_purchased_by is NULL or ip_carrier_store is NULL or 
+    ip_carrier_tag is NULL or ip_barcode is NULL or ip_price is NULL or ip_quantity is NULL THEN
+		LEAVE sp_main;
+	END IF;
+    
+    IF ip_price < 0 OR ip_quantity < 0 THEN
+		LEAVE sp_main;
+	END IF;
     
      IF NOT EXISTS (SELECT * FROM orders WHERE orderID = ip_orderID) THEN
        
