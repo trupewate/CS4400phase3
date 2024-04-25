@@ -355,7 +355,16 @@ create procedure repair_refuel_drone
 	(in ip_drone_store varchar(40), in ip_drone_tag integer,
     in ip_refueled_trips integer)
 sp_main: begin
-    declare rem_trips integer;
+	declare rem_trips integer;
+    
+	if ip_refueled_trips < 0 then
+		leave sp_main;
+    end if;
+    
+    IF ip_drone_store IS NULL OR ip_drone_store = '' OR ip_drone_tag IS NULL OR ip_drone_tag < 0 THEN
+		leave sp_main;
+	end if;
+    
     if (ip_drone_store, ip_drone_tag) not in (select storeID, droneTag from drones) then leave sp_main; end if;
     set rem_trips = (select remaining_trips from drones where drones.storeID = ip_drone_store and drones.droneTag = ip_drone_tag);
     update drones set remaining_trips = rem_trips + ip_refueled_trips where drones.storeID = ip_drone_store and drones.droneTag = ip_drone_tag;
