@@ -326,11 +326,14 @@ delimiter //
 create procedure increase_customer_credits
 	(in ip_uname varchar(40), in ip_money integer)
 sp_main: begin
-    Declare sum INT Default 0;
+    Declare sum1 INTEGER DEFAULT 0;
+    if ip_money <= 0 OR ip_money IS NULL OR ip_uname IS NULL then
+		leave sp_main;
+	end if;
     if ip_uname not in (select uname from customers) then leave sp_main; end if;
-    set sum = (select credit from customers where uname = ip_uname);
-    set sum = sum + ip_money;
-    update customers set credit = sum where uname = ip_uname;
+    set sum1 = (select credit from customers where uname = ip_uname);
+    set sum1 = sum1 + ip_money;
+    update customers set credit = sum1 where uname = ip_uname;
 end //
 delimiter ;
 
