@@ -291,6 +291,18 @@ sp_main: begin
 		leave sp_main;
 	end if;
     
+    if ip_uname in (select uname from users) then
+		leave sp_main;
+	end if;
+    
+    if ip_uname in (select uname from store_workers) then
+		leave sp_main;
+	end if;
+    
+    if ip_taxID in (select taxID from employees) then
+		leave sp_main;
+	end if;
+    
     if ip_uname not in (select uname from users) then
 		insert into users values (ip_uname, ip_first_name, ip_last_name, ip_address, ip_birthdate);
 	end if;
@@ -301,14 +313,24 @@ sp_main: begin
 			insert into employees values (ip_uname, ip_taxID, ip_service, ip_salary);
         END IF;
 	end if;
-    if ip_uname in (select uname from store_workers) then leave sp_main; end if;
-    if ip_uname in (select uname from drone_pilots) then leave sp_main; end if;
-    if ip_licenseID in (select licenseID from drone_pilots) then leave sp_main; end if;
     
-	insert into drone_pilots values (ip_uname, ip_licenseID, ip_experience);
+    -- if ip_uname in (select uname from store_workers) then leave sp_main; end if;
+--     if ip_uname in (select uname from drone_pilots) then leave sp_main; end if;
+--     if ip_licenseID in (select licenseID from drone_pilots) then leave sp_main; end if;
+--     
+-- 	insert into drone_pilots values (ip_uname, ip_licenseID, ip_experience);
 
+	if ip_uname not in (select uname from store_workers) AND
+     ip_uname not in (select uname from drone_pilots) AND
+	 ip_licenseID not in (select licenseID from drone_pilots) AND
+     ip_uname in (select uname from employees) then 
+    
+		insert into drone_pilots values (ip_uname, ip_licenseID, ip_experience);
+	
+    end if;
 end //
 delimiter ;
+
 
 
 -- add product
