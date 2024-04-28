@@ -279,16 +279,14 @@ sp_main: begin
     DECLARE user_exists INT;
     DECLARE employee_exists INT;
     DECLARE pilot_exists INT;
+    DECLARE taxID_exists INT;
 
     SELECT COUNT(*) INTO user_exists FROM users WHERE uname = ip_uname;
     SELECT COUNT(*) INTO employee_exists FROM employees WHERE uname = ip_uname;
     SELECT COUNT(*) INTO pilot_exists FROM drone_pilots WHERE uname = ip_uname OR licenseID = ip_licenseID;
+    SELECT COUNT(*) INTO taxID_exists FROM employees WHERE taxID = ip_taxID;
 
-    IF user_exists > 0 THEN
-        LEAVE sp_main;
-    END IF;
-
-    IF employee_exists > 0 OR pilot_exists > 0 THEN
+    IF user_exists > 0 OR employee_exists > 0 OR pilot_exists > 0 OR taxID_exists > 0 THEN
         LEAVE sp_main;
     END IF;
 
