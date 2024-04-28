@@ -299,6 +299,18 @@ sp_main: begin
 		leave sp_main;
 	end if;
     
+    if ip_uname in (select uname from employees) then
+		leave sp_main;
+	end if;
+    
+    if ip_uname in (select uname from drone_pilots) then
+		leave sp_main;
+	end if;
+    
+    if ip_uname in (select uname from customers) then
+		leave sp_main;
+	end if;
+    
     if ip_taxID in (select taxID from employees) then
 		leave sp_main;
 	end if;
@@ -422,57 +434,53 @@ create procedure begin_order
     in ip_price integer, in ip_quantity integer)
 sp_main: begin
     
-    DECLARE pc_credits INTEGER;
-    DECLARE pd_capacity INTEGER;
+    DECLARE pc_credits INTEGER DEFAULT 0;
+    DECLARE pd_capacity INTEGER DEFAULT 0;
+    DECLARE product_weight INTEGER DEFAULT 0;
     
-    IF ip_orderID is NULL or ip_sold_on is NULL or ip_purchased_by is NULL or ip_carrier_store is NULL or 
-    ip_carrier_tag is NULL or ip_barcode is NULL or ip_price is NULL or ip_quantity is NULL THEN
-		LEAVE sp_main;
-	END IF;
+    IF ip_orderID IS NULL OR ip_sold_on IS NULL OR ip_purchased_by IS NULL OR 
+       ip_carrier_store IS NULL OR ip_carrier_tag IS NULL OR ip_barcode IS NULL OR 
+       ip_price IS NULL OR ip_quantity IS NULL THEN
+        LEAVE sp_main;
+    END IF;
     
-    IF ip_price < 0 OR ip_quantity < 0 THEN
-		LEAVE sp_main;
-	END IF;
+    IF ip_price < 0 OR ip_quantity < 1 THEN
+        LEAVE sp_main;
+    END IF;
     
-     IF NOT EXISTS (SELECT * FROM orders WHERE orderID = ip_orderID) THEN
-       
-       IF ip_price >= 0 AND ip_quantity > 0 THEN
-       
-			IF EXISTS (SELECT * FROM customers WHERE uname = ip_purchased_by) THEN
-	   
-				SET pc_credits = (SELECT credit FROM customers WHERE uname = ip_purchased_by);
-                
-                IF pc_credits >= (ip_quantity * ip_price) THEN
-                
-                IF EXISTS (SELECT * FROM drones WHERE droneTag = ip_carrier_tag AND storeID = ip_carrier_store) THEN
-					
-						SET pd_capacity = (SELECT capacity FROM drones WHERE droneTag = ip_carrier_tag AND storeID = ip_carrier_store);
-                        
-                       IF EXISTS (SELECT * FROM products WHERE barcode = ip_barcode) THEN
-                        
-                        IF pd_capacity >= (ip_quantity * (SELECT weight FROM products WHERE barcode = ip_barcode)) THEN
-                        
-								INSERT INTO orders (orderID, sold_on, purchased_by, carrier_store, carrier_tag)
-								VALUES (ip_orderID, ip_sold_on, ip_purchased_by, ip_carrier_store, ip_carrier_tag);
-                                
-                                INSERT INTO order_lines (orderID, barcode, price, quantity)
-                                VALUES (ip_orderID, ip_barcode, ip_price, ip_quantity);
-								
-								-- UPDATE customers SET credit = credit - (ip_price * ip_quantity) WHERE uname = ip_purchased_by;
-                                
-                                -- UPDATE drones SET capacity = capacity - (ip_quantity * (SELECT weight FROM products WHERE barcode = ip_barcode)) WHERE droneTag = ip_carrier_tag;
-						END IF;
-						END IF;
-					END IF;
-				END IF;
-            
-            END IF;
-            
-       END IF; 
-			
-	 END IF;
-end //
-delimiter ;
+    IF EXISTS (SELECT * FROM orders WHERE orderID = ip_orderID) THEN
+        LEAVE sp_main;
+    END IF;
+    
+    IF EXISTS (SELECT * FROM customers WHERE uname = ip_purchased_by) THEN
+        SET pc_credits = (SELECT current_credit - credit_already_allocated FROM customer_credit_check WHERE customer_name = ip_purchased_by);
+        IF pc_credits < ip_price * ip_quantity THEN
+            LEAVE sp_main;
+        END IF;
+    ELSE
+        LEAVE sp_main;
+    END IF;
+    
+    IF EXISTS (SELECT * FROM drones WHERE droneTag = ip_carrier_tag AND storeID = ip_carrier_store) THEN
+        SELECT total_weight_allowed - current_weight INTO pd_capacity
+        FROM drone_traffic_control 
+        WHERE drone_serves_store = ip_carrier_store AND drone_tag = ip_carrier_tag;
+        
+        SELECT weight INTO product_weight FROM products WHERE barcode = ip_barcode;
+        IF pd_capacity < product_weight * ip_quantity THEN
+            LEAVE sp_main;
+        END IF;
+    ELSE
+        LEAVE sp_main;
+    END IF;
+    
+    INSERT INTO orders (orderID, sold_on, purchased_by, carrier_store, carrier_tag)
+    VALUES (ip_orderID, ip_sold_on, ip_purchased_by, ip_carrier_store, ip_carrier_tag);
+    CALL add_order_line(ip_orderID, ip_barcode, ip_price, ip_quantity);
+
+END //
+DELIMITER ;
+
 
 -- add order line
 delimiter // 
