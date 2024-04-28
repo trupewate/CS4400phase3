@@ -273,74 +273,38 @@ create procedure add_drone_pilot
     in ip_salary integer, in ip_licenseID varchar(40),
     in ip_experience integer)
 sp_main: begin
-    
-    if ip_uname is NULL or ip_uname = '' THEN
-		leave sp_main;
-	end if;
-    
-    if ip_first_name IS NULL or ip_last_name IS NULL or ip_address IS NULL or 
-    ip_birthdate IS NULL OR ip_taxID IS NULL OR ip_service IS NULL OR ip_salary IS NULL THEN
-		LEAVE sp_main;
-	end if;
-    
-    if ip_licenseID is NULL or ip_licenseID = '' THEN
-		leave sp_main;
-	end if;
-    
-    if ip_experience is NULL or ip_experience < 0 THEN
-		leave sp_main;
-	end if;
-    
-    if ip_uname in (select uname from users) then
-		leave sp_main;
-	end if;
-    
-    if ip_uname in (select uname from store_workers) then
-		leave sp_main;
-	end if;
-    
-    if ip_uname in (select uname from employees) then
-		leave sp_main;
-	end if;
-    
-    if ip_uname in (select uname from drone_pilots) then
-		leave sp_main;
-	end if;
-    
-    if ip_uname in (select uname from customers) then
-		leave sp_main;
-	end if;
-    
-    if ip_taxID in (select taxID from employees) then
-		leave sp_main;
-	end if;
-    
-    if ip_uname not in (select uname from users) then
-		insert into users values (ip_uname, ip_first_name, ip_last_name, ip_address, ip_birthdate);
-	end if;
-    
-    if ip_uname not in (select uname from employees) then
-        if ip_service < 0 then leave sp_main; end if;
-        if NOT EXISTS (SELECT * FROM employees WHERE taxID = ip_taxID) THEN
-			insert into employees values (ip_uname, ip_taxID, ip_service, ip_salary);
-        END IF;
-	end if;
-    
-    -- if ip_uname in (select uname from store_workers) then leave sp_main; end if;
---     if ip_uname in (select uname from drone_pilots) then leave sp_main; end if;
---     if ip_licenseID in (select licenseID from drone_pilots) then leave sp_main; end if;
---     
--- 	insert into drone_pilots values (ip_uname, ip_licenseID, ip_experience);
 
-	if ip_uname not in (select uname from store_workers) AND
-     ip_uname not in (select uname from drone_pilots) AND
-	 ip_licenseID not in (select licenseID from drone_pilots) AND
-     ip_uname in (select uname from employees) then 
-    
-		insert into drone_pilots values (ip_uname, ip_licenseID, ip_experience);
-	
-    end if;
-end //
+
+
+    DECLARE user_exists INT;
+    DECLARE employee_exists INT;
+    DECLARE pilot_exists INT;
+
+    SELECT COUNT(*) INTO user_exists FROM users WHERE uname = ip_uname;
+    SELECT COUNT(*) INTO employee_exists FROM employees WHERE uname = ip_uname;
+    SELECT COUNT(*) INTO pilot_exists FROM drone_pilots WHERE uname = ip_uname OR licenseID = ip_licenseID;
+
+    IF user_exists > 0 THEN
+        LEAVE sp_main;
+    END IF;
+
+    IF employee_exists > 0 OR pilot_exists > 0 THEN
+        LEAVE sp_main;
+    END IF;
+
+    IF ip_uname IS NULL OR ip_first_name IS NULL OR ip_last_name IS NULL OR 
+       ip_address IS NULL OR ip_birthdate IS NULL OR ip_taxID IS NULL OR 
+       ip_service IS NULL OR ip_salary IS NULL OR ip_licenseID IS NULL OR 
+       ip_experience IS NULL OR ip_experience < 0 OR ip_service < 0 THEN
+        LEAVE sp_main;
+    END IF;
+
+    INSERT INTO users VALUES (ip_uname, ip_first_name, ip_last_name, ip_address, ip_birthdate);
+    INSERT INTO employees VALUES (ip_uname, ip_taxID, ip_service, ip_salary);
+    INSERT INTO drone_pilots VALUES (ip_uname, ip_licenseID, ip_experience);
+
+END//
+
 delimiter ;
 
 
