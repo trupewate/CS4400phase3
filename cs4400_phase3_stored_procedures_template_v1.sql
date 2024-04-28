@@ -652,11 +652,36 @@ on o.carrier_store = d.storeId and o.carrier_tag = d.droneTag;
 -- display store revenue and activity
 create or replace view store_sales_overview (store_id, sname, manager, revenue,
 	incoming_revenue, incoming_orders) as
-select s.storeID as 'store_id', s.sname, s.manager, s.revenue, o.incoming_revenue, o.incoming_orders from stores as s
-left join (select carrier_store, count(orders.orderID) as incoming_orders, sum(order_revenue) as incoming_revenue from orders
-left join (select order_lines.orderID, sum(price * quantity) as order_revenue from order_lines group by order_lines.orderID) 
-ol on orders.orderID = ol.orderID group by orders.carrier_store) 
-o on o.carrier_store = s.storeID;
+SELECT 
+    s.storeID AS store_id, 
+    s.sname, 
+    s.manager,
+    s.revenue,
+    IFNULL(o.incoming_revenue, 0) AS incoming_revenue,
+    IFNULL(o.incoming_orders, 0) AS incoming_orders
+FROM 
+    stores s
+LEFT JOIN (
+    SELECT 
+        carrier_store, 
+        COUNT(*) AS incoming_orders,
+        SUM(order_revenue) AS incoming_revenue
+    FROM 
+        orders o
+    LEFT JOIN (
+        SELECT 
+            orderID, 
+            SUM(price * quantity) AS order_revenue
+        FROM 
+            order_lines
+        GROUP BY 
+            orderID
+    ) ol ON o.orderID = ol.orderID
+    WHERE 
+        o.sold_on >= CURRENT_DATE()
+    GROUP BY 
+        o.carrier_store
+) o ON o.carrier_store = s.storeID;
 
 
 -- display the current orders that are being placed/in progress
