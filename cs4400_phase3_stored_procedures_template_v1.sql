@@ -448,31 +448,23 @@ sp_main: begin
         LEAVE sp_main;
     END IF;
     
-    IF EXISTS (SELECT * FROM orders WHERE orderID = ip_orderID) THEN
+    IF EXISTS (SELECT * FROM orders WHERE orderID = ip_orderID) OR NOT EXISTS (SELECT * FROM customers WHERE uname = ip_purchased_by) OR NOT EXISTS (SELECT * FROM products WHERE barcode = ip_barcode)  OR NOT EXISTS (SELECT * FROM drones WHERE storeID = ip_carrier_store AND droneTag = ip_carrier_tag) THEN
         LEAVE sp_main;
     END IF;
     
-    IF EXISTS (SELECT * FROM customers WHERE uname = ip_purchased_by) THEN
-        SET pc_credits = (SELECT current_credit - credit_already_allocated FROM customer_credit_check WHERE customer_name = ip_purchased_by);
-        IF pc_credits < ip_price * ip_quantity THEN
-            LEAVE sp_main;
-        END IF;
-    ELSE
-        LEAVE sp_main;
-    END IF;
+	SET pc_credits = (SELECT current_credit - credit_already_allocated FROM customer_credit_check WHERE customer_name = ip_purchased_by);
+	IF pc_credits < ip_price * ip_quantity THEN
+		LEAVE sp_main;
+	END IF;
     
-    IF EXISTS (SELECT * FROM drones WHERE droneTag = ip_carrier_tag AND storeID = ip_carrier_store) THEN
-        SELECT total_weight_allowed - current_weight INTO pd_capacity
-        FROM drone_traffic_control 
-        WHERE drone_serves_store = ip_carrier_store AND drone_tag = ip_carrier_tag;
-        
-        SELECT weight INTO product_weight FROM products WHERE barcode = ip_barcode;
-        IF pd_capacity < product_weight * ip_quantity THEN
-            LEAVE sp_main;
-        END IF;
-    ELSE
-        LEAVE sp_main;
-    END IF;
+	SELECT total_weight_allowed - current_weight INTO pd_capacity
+	FROM drone_traffic_control 
+	WHERE drone_serves_store = ip_carrier_store AND drone_tag = ip_carrier_tag;
+	
+	SELECT weight INTO product_weight FROM products WHERE barcode = ip_barcode;
+	IF pd_capacity < product_weight * ip_quantity THEN
+		LEAVE sp_main;
+	END IF;
     
     INSERT INTO orders (orderID, sold_on, purchased_by, carrier_store, carrier_tag)
     VALUES (ip_orderID, ip_sold_on, ip_purchased_by, ip_carrier_store, ip_carrier_tag);
